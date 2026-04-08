@@ -158,7 +158,7 @@ export default function App() {
     });
     if (!res.ok) throw new Error("API error " + res.status);
     const data = await res.json();
-    return data.content.filter(b => b.type === "text").map(b => b.text).join("\n");
+    console.log("data:", JSON.stringify(data)); return (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
   };
 
   const runSearch = async () => {
