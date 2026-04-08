@@ -25,7 +25,7 @@ const TYPE_PILLS = [
 ];
 
 const SOURCE_PILLS = [
-  {val:"Eater NY",label:"Eater NY"},{val:"The Infatuation",label:"The Infatuation"},{val:"NY Times Dining",label:"NY Times Dining"},{val:"Resy hot list",label:"Resy hot list"},{val:"Tasting Table",label:"Tasting Table"},{val:"Conde Nast Traveler",label:"Conde Nast"}
+  {val:"Eater",label:"Eater"},{val:"The Infatuation",label:"The Infatuation"},{val:"NY Times Dining",label:"NY Times Dining"},{val:"Resy hot list",label:"Resy hot list"},{val:"Tasting Table",label:"Tasting Table"},{val:"Conde Nast Traveler",label:"Conde Nast"}
 ];
 
 function PillGroup({ pills, active, onToggle }) {
@@ -81,7 +81,7 @@ function VenueCard({ venue, onMore, onAlt }) {
       {venue.neighborhood && <div style={{ fontSize:12, color:"#888", marginBottom:8 }}>{venue.neighborhood}</div>}
       <div style={{ display:"flex", flexWrap:"wrap", gap:5, marginBottom:8 }}>
         {(venue.sources_mentioned || []).map(s => (
-          <span key={s} style={{ fontSize:11, padding:"3px 8px", borderRadius:6, fontWeight:500, background: s.toLowerCase().includes("eater") ? "#FAECE7" : s.toLowerCase().includes("infat") ? "#FBEAF0" : s.toLowerCase().includes("times") ? "#E6F1FB" : "#FAEEDA", color: s.toLowerCase().includes("eater") ? "#712B13" : s.toLowerCase().includes("infat") ? "#72243E" : s.toLowerCase().includes("times") ? "#0C447C" : "#633806" }}>{s}</span>
+          <span key={s} style={{ fontSize:11, padding:"3px 8px", borderRadius:6, fontWeight:500, background: s.toLowerCase().includes("eater") ? "#FAECE7" : s.toLowerCase().includes("infat") ? "#FBEAF0" : s.toLowerCase().includes("times") ? "#E6F1FB" : s.toLowerCase().includes("yelp") ? "#FFF0E0" : s.toLowerCase().includes("trip") ? "#E8F4FD" : "#FAEEDA", color: s.toLowerCase().includes("eater") ? "#712B13" : s.toLowerCase().includes("infat") ? "#72243E" : s.toLowerCase().includes("times") ? "#0C447C" : s.toLowerCase().includes("yelp") ? "#8B3A00" : s.toLowerCase().includes("trip") ? "#0A5C8A" : "#633806" }}>{s}</span>
         ))}
         {(venue.tags || []).map(t => <span key={t} style={{ fontSize:11, padding:"3px 8px", borderRadius:6, fontWeight:500, background:"#EEEDFE", color:"#3C3489" }}>{t}</span>)}
       </div>
@@ -101,9 +101,10 @@ export default function App() {
   const [occasion, setOccasion] = useState(["client dinner"]);
   const [vibe, setVibe] = useState(["impressive, wow factor"]);
   const [type, setType] = useState(["restaurant"]);
-  const [sources, setSources] = useState(["Eater NY","The Infatuation","NY Times Dining"]);
+  const [sources, setSources] = useState(["Eater","The Infatuation","NY Times Dining"]);
   const [culinaryEvents, setCulinaryEvents] = useState(false);
   const [neighborhood, setNeighborhood] = useState("");
+  const [radius, setRadius] = useState("short drive or transit (under 30 min)");
   const [headcount, setHeadcount] = useState(4);
   const [time, setTime] = useState("dinner (6-10pm)");
   const [budget, setBudget] = useState("$100-150");
@@ -115,6 +116,8 @@ export default function App() {
   const [useTeam, setUseTeam] = useState("yes");
   const [delivery, setDelivery] = useState(false);
   const [walkIn, setWalkIn] = useState(false);
+  const [parking, setParking] = useState(false);
+  const [transit, setTransit] = useState(false);
   const [resResy, setResResy] = useState(true);
   const [resOT, setResOT] = useState(true);
   const [resSR, setResSR] = useState(true);
@@ -130,35 +133,56 @@ export default function App() {
   const addDate = () => { if (!dateInput || dates.includes(dateInput)) return; setDates(prev => [...prev, dateInput]); setDateInput(""); };
   const fmtDate = (d) => new Date(d + "T12:00:00").toLocaleDateString("en-US", { weekday:"short", month:"short", day:"numeric" });
 
-  const buildPrompt = (extra) => {
+  const buildPrompt = () => {
     const loc = neighborhood || "Manhattan, NYC";
     const dateStr = dates.length ? dates.map(d => new Date(d + "T12:00:00").toLocaleDateString("en-US", { weekday:"long", month:"long", day:"numeric", year:"numeric" })).join(", ") : "flexible / no specific date";
-    const allSources = sources.length ? sources.join(", ") : "Eater NY, The Infatuation";
+    const allSources = sources.length ? sources.join(", ") : "Eater, The Infatuation, NY Times Dining";
     const resPlatforms = [resResy && "Resy", resOT && "OpenTable", resSR && "SevenRooms", resTock && "Tock"].filter(Boolean);
     const extraOccasion = culinaryEvents ? ["culinary events & festivals"] : [];
     const occasionStr = [...occasion, ...extraOccasion].join(", ") || "dining out";
 
+    const accessNotes = [
+      parking ? "parking available is important" : "",
+      transit ? "near mass transit is important" : "",
+      delivery ? "must offer delivery" : "",
+      walkIn ? "walk-in only venues are ok" : "exclude walk-in only venues"
+    ].filter(Boolean).join("; ");
+
     const culinaryNote = culinaryEvents ? "\nCULINARY EVENTS MODE: Search broadly for ALL upcoming food & wine festivals, James Beard Foundation dinners, chef collaboration dinners, ticketed tasting events, immersive dining, and culinary popups in or near " + loc + (dates.length ? " around " + dateStr : " in the coming weeks and months") + ". For each event include: name, organizer, dates, ticket price, how to purchase, and why it is worth attending." : "";
-    const deliveryNote = delivery ? "\nOnly recommend venues that offer delivery. Include which platform(s)." : "";
-    const walkNote = walkIn ? "\nInclude walk-in only venues and note typical wait times." : "\nExclude walk-in only venues.";
     const resNote = resPlatforms.length ? "\nNote booking platform (" + resPlatforms.join(", ") + ") and include direct booking links." + (dates.length ? " Flag if hard to book on " + dateStr + "." : "") : "";
     const allItems = [...RESTAURANTS.map(x => x.name), ...ACTIVITIES.map(x => x.name), ...VENUES.map(x => x.name + (x.good === "Yes" ? " [TEAM FAVORITE]" : ""))];
     const teamCtx = useTeam === "yes" ? "\nCross-reference our team list and flag matches: " + allItems.join(", ") : "";
 
-    if (extra) return extra;
-
-    return "You are an expert NYC dining and nightlife scout. Search the web for current recommendations from " + allSources + ".\n\nOccasion: " + occasionStr + "\nType: " + (type.join(", ") || "restaurant") + "\nVibe: " + (vibe.join(", ") || "good atmosphere") + "\nLocation: " + loc + "\nHeadcount: " + headcount + " people\nTime: " + time + "\nDate(s): " + dateStr + "\nBudget: " + budget + " per person\nCuisine/focus: " + (cuisine || "open") + "\nNotes: " + (notes || "none") + culinaryNote + deliveryNote + walkNote + resNote + teamCtx + "\n\nReturn ONLY a valid JSON array, no markdown, no explanation. Each object:\n{\"name\":\"\",\"neighborhood\":\"\",\"price_range\":\"\",\"sources_mentioned\":[],\"source_notes\":\"\",\"tags\":[],\"why_it_fits\":\"\",\"reservation_tip\":\"\",\"on_team_list\":false,\"top_pick\":false}\n\nOnly one item should have top_pick: true.";
+    return "You are an expert dining, nightlife, and entertainment scout. Search the web for current recommendations.\n\n" +
+      "SOURCES: Search " + allSources + " first. If these sources do not cover the location, fall back to: Yelp, Google reviews, TripAdvisor, local city magazines, local tourism boards, and Zagat. Always find real, currently-open venues with genuine recent coverage.\n\n" +
+      "Occasion: " + occasionStr + "\n" +
+      "Type: " + (type.join(", ") || "restaurant") + "\n" +
+      "Vibe: " + (vibe.join(", ") || "good atmosphere") + "\n" +
+      "Location: " + loc + "\n" +
+      "Radius: " + radius + "\n" +
+      "Headcount: " + headcount + " people\n" +
+      "Time: " + time + "\n" +
+      "Date(s): " + dateStr + "\n" +
+      "Budget: " + budget + " per person\n" +
+      "Cuisine/focus: " + (cuisine || "open") + "\n" +
+      "Access requirements: " + (accessNotes || "none") + "\n" +
+      "Notes: " + (notes || "none") +
+      culinaryNote + resNote + teamCtx + "\n\n" +
+      "IMPORTANT: Respond with ONLY a valid JSON array. No markdown, no explanation, no text before or after. Start with [ and end with ].\n\n" +
+      "Each object must have exactly these fields:\n" +
+      "{\"name\":\"\",\"neighborhood\":\"\",\"price_range\":\"\",\"sources_mentioned\":[],\"source_notes\":\"\",\"tags\":[],\"why_it_fits\":\"\",\"reservation_tip\":\"\",\"on_team_list\":false,\"top_pick\":false}\n\n" +
+      "Return exactly " + count + " results. Only one should have top_pick: true.";
   };
 
-  const callClaude = async (prompt) => {
+  const callAPI = async (prompt) => {
     const res = await fetch("/api/search", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": import.meta.env.VITE_ANTHROPIC_KEY, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 2000, tools: [{ type: "web_search_20250305", name: "web_search" }], messages: [{ role: "user", content: prompt }] })
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt })
     });
     if (!res.ok) throw new Error("API error " + res.status);
     const data = await res.json();
-    console.log("data:", JSON.stringify(data)); return (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
+    return data.text || "";
   };
 
   const runSearch = async () => {
@@ -167,14 +191,14 @@ export default function App() {
     setError(null);
     setFollowUpResult(null);
     try {
-      const text = await callClaude(buildPrompt());
+      const text = await callAPI(buildPrompt());
       const start = text.indexOf("[");
       const end = text.lastIndexOf("]");
-      if (start === -1 || end === -1) throw new Error("No results found");
+      if (start === -1 || end === -1) throw new Error("No results found — try a different location or filters.");
       const venues = JSON.parse(text.slice(start, end + 1));
       setResults(venues);
     } catch (e) {
-      setError("Something went wrong — please try again. " + e.message);
+      setError("Something went wrong — " + e.message);
     }
     setLoading(false);
   };
@@ -183,7 +207,7 @@ export default function App() {
     setFollowUpLoading(true);
     setFollowUpResult(null);
     try {
-      const text = await callClaude(prompt);
+      const text = await callAPI(prompt);
       setFollowUpResult(text);
     } catch (e) {
       setFollowUpResult("Error: " + e.message);
@@ -217,10 +241,30 @@ export default function App() {
           <SectionLabel text="type" />
           <PillGroup pills={TYPE_PILLS} active={type} onToggle={v => toggle(setType, v)} />
 
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12, marginBottom:16 }}>
-            <div><label style={{ fontSize:12, color:"#888", display:"block", marginBottom:4 }}>neighborhood / city</label><input style={inputStyle} placeholder="e.g. NYC, Savannah..." value={neighborhood} onChange={e => setNeighborhood(e.target.value)} /></div>
-            <div><label style={{ fontSize:12, color:"#888", display:"block", marginBottom:4 }}>headcount</label><input style={inputStyle} type="number" min={1} max={500} value={headcount} onChange={e => setHeadcount(e.target.value)} /></div>
-            <div><label style={{ fontSize:12, color:"#888", display:"block", marginBottom:4 }}>time of day</label>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:16 }}>
+            <div>
+              <label style={{ fontSize:12, color:"#888", display:"block", marginBottom:4 }}>neighborhood / city</label>
+              <input style={inputStyle} placeholder="e.g. NYC, Savannah, Scotch Plains NJ..." value={neighborhood} onChange={e => setNeighborhood(e.target.value)} />
+            </div>
+            <div>
+              <label style={{ fontSize:12, color:"#888", display:"block", marginBottom:4 }}>radius</label>
+              <select style={inputStyle} value={radius} onChange={e => setRadius(e.target.value)}>
+                <option>walking (under 10 min)</option>
+                <option>nearby (under 20 min)</option>
+                <option>short drive or transit (under 30 min)</option>
+                <option>worth the trip (under 60 min)</option>
+                <option>no limit</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:16 }}>
+            <div>
+              <label style={{ fontSize:12, color:"#888", display:"block", marginBottom:4 }}>headcount</label>
+              <input style={inputStyle} type="number" min={1} max={500} value={headcount} onChange={e => setHeadcount(e.target.value)} />
+            </div>
+            <div>
+              <label style={{ fontSize:12, color:"#888", display:"block", marginBottom:4 }}>time of day</label>
               <select style={inputStyle} value={time} onChange={e => setTime(e.target.value)}>
                 {["breakfast / brunch","lunch (12-3pm)","happy hour (4-7pm)","dinner (6-10pm)","late night (10pm+)","anytime / multi-day"].map(o => <option key={o}>{o}</option>)}
               </select>
@@ -242,16 +286,22 @@ export default function App() {
           <p style={{ fontSize:12, color:"#aaa", marginBottom:16, marginTop:4 }}>Add one or more dates — recommendations will be filtered for availability.</p>
 
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:16 }}>
-            <div><label style={{ fontSize:12, color:"#888", display:"block", marginBottom:4 }}>per-person budget</label>
+            <div>
+              <label style={{ fontSize:12, color:"#888", display:"block", marginBottom:4 }}>per-person budget</label>
               <select style={inputStyle} value={budget} onChange={e => setBudget(e.target.value)}>
                 {["under $30","$30-60","$60-100","$100-150","$150-250","$250-500","no limit / expense account"].map(o => <option key={o}>{o}</option>)}
               </select>
             </div>
-            <div><label style={{ fontSize:12, color:"#888", display:"block", marginBottom:4 }}>cuisine / focus</label><input style={inputStyle} placeholder="e.g. Japanese, open..." value={cuisine} onChange={e => setCuisine(e.target.value)} /></div>
+            <div>
+              <label style={{ fontSize:12, color:"#888", display:"block", marginBottom:4 }}>cuisine / focus</label>
+              <input style={inputStyle} placeholder="e.g. Japanese, open..." value={cuisine} onChange={e => setCuisine(e.target.value)} />
+            </div>
           </div>
 
-          <SectionLabel text="ordering options" />
+          <SectionLabel text="access & logistics" />
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:16 }}>
+            <Checkbox on={parking} onClick={() => setParking(prev => !prev)}>parking available</Checkbox>
+            <Checkbox on={transit} onClick={() => setTransit(prev => !prev)}>near mass transit</Checkbox>
             <Checkbox on={delivery} onClick={() => setDelivery(prev => !prev)}>offers delivery</Checkbox>
             <Checkbox on={walkIn} onClick={() => setWalkIn(prev => !prev)}>include walk-in only</Checkbox>
           </div>
@@ -267,12 +317,15 @@ export default function App() {
 
           <SectionLabel text="sources" />
           <PillGroup pills={SOURCE_PILLS} active={sources} onToggle={v => toggle(setSources, v)} />
+          <p style={{ fontSize:12, color:"#aaa", marginBottom:16, marginTop:-8 }}>For markets not covered by these sources, I'll automatically search Yelp, Google, TripAdvisor, and local guides.</p>
 
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:16 }}>
-            <div><label style={{ fontSize:12, color:"#888", display:"block", marginBottom:4 }}>number of results</label>
+            <div>
+              <label style={{ fontSize:12, color:"#888", display:"block", marginBottom:4 }}>number of results</label>
               <select style={inputStyle} value={count} onChange={e => setCount(e.target.value)}>{["2","3","5"].map(o => <option key={o}>{o}</option>)}</select>
             </div>
-            <div><label style={{ fontSize:12, color:"#888", display:"block", marginBottom:4 }}>include team list picks?</label>
+            <div>
+              <label style={{ fontSize:12, color:"#888", display:"block", marginBottom:4 }}>include team list picks?</label>
               <select style={inputStyle} value={useTeam} onChange={e => setUseTeam(e.target.value)}>
                 <option value="yes">yes - cross-reference our list</option>
                 <option value="no">no - find new spots only</option>
@@ -295,7 +348,7 @@ export default function App() {
             <div style={{ marginTop:20 }}>
               {results.map((v, i) => (
                 <VenueCard key={i} venue={v}
-                  onMore={name => runFollowUp("Tell me more about " + name + " in detail — what to order, insider tips, vibe, and what the space is like inside.")}
+                  onMore={name => runFollowUp("Tell me more about " + name + " in detail - what to order, insider tips, vibe, and what the space is like inside.")}
                   onAlt={name => runFollowUp("Find me 3 alternatives similar to " + name + " for the same occasion and location.")}
                 />
               ))}
