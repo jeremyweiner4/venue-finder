@@ -6,25 +6,30 @@ export default async function handler(req, res) {
 
   try {
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
-    const prompt = body.prompt;
+    const { prompt, useSearch = true } = body;
 
     let messages = [{ role: "user", content: prompt }];
     let finalText = "";
+
+    const requestBody = {
+      model: "claude-sonnet-4-6",
+      max_tokens: 2000,
+      messages,
+    };
+
+    if (useSearch) {
+      requestBody.tools = [{ type: "web_search_20250305", name: "web_search" }];
+    }
 
     for (let i = 0; i < 10; i++) {
       const response = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-key": process.env.anthropic_key,
+          "x-api-key": process.env.ANTHROPIC_KEY,
           "anthropic-version": "2023-06-01"
         },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-6",
-          max_tokens: 2000,
-          tools: [{ type: "web_search_20250305", name: "web_search" }],
-          messages
-        })
+        body: JSON.stringify({ ...requestBody, messages })
       });
 
       const data = await response.json();
