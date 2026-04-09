@@ -348,8 +348,8 @@ export default function App() {
             <div style={{ marginTop:20 }}>
               {results.map((v, i) => (
                 <VenueCard key={i} venue={v}
-                  onMore={name => runFollowUp("Tell me more about " + name + " in detail - what to order, insider tips, vibe, and what the space is like inside.")}
-                  onAlt={name => runFollowUp("Find me 3 alternatives similar to " + name + " for the same occasion and location.")}
+                  onMore={name => runFollowUp("Give me a brief overview of " + name + ": top 3 dishes to order, vibe, and one insider tip. Be concise.")}
+                  onAlt={name => runFollowUp("Name 3 alternatives to " + name + " for the same occasion and location. For each give just the name, neighborhood, and one sentence why.")}
                 />
               ))}
             </div>
