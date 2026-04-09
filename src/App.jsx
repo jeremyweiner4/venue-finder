@@ -316,7 +316,14 @@ export default function App() {
       const text = await callAPI(buildPrompt(), true);
       const start = text.indexOf("["); const end = text.lastIndexOf("]");
       if (start === -1 || end === -1) throw new Error("No results found - try a different location or filters.");
-      setResults(JSON.parse(text.slice(start, end + 1)));
+      let jsonStr = text.slice(start, end + 1);
+      try {
+        setResults(JSON.parse(jsonStr));
+      } catch (parseErr) {
+        // Strip control characters and retry
+        jsonStr = jsonStr.replace(/[\u0000-\u001F\u007F]/g, " ").replace(/,\s*]/g, "]").replace(/,\s*}/g, "}");
+        setResults(JSON.parse(jsonStr));
+      }
     } catch (e) { setError(e.message); }
     setLoading(false);
   };
