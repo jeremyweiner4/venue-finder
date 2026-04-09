@@ -495,8 +495,8 @@ export default function App() {
                   <p style={{ fontSize: 11, color: C.textDim, marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.08em" }}>{results.length} results</p>
                   {results.map((v, i) => (
                     <VenueCard key={i} venue={v}
-                      onMore={name => runFollowUp("Tell me more about " + name + ": top dishes, vibe, insider tips. Be concise.")}
-                      onAlt={name => runFollowUp("Name 3 alternatives to " + name + " for the same occasion and location. For each: name, neighborhood, one sentence why.")}
+                      onMore={name => runFollowUp("Tell me more about " + name + " in " + (neighborhood || "Manhattan, NYC") + ". Occasion: " + (occasion.join(", ") || "dining") + ". Give me: top 3 things to order, the vibe and atmosphere, one insider tip, and reservation advice. Be concise.")}
+                      onAlt={name => runFollowUp("Suggest 3 alternatives to " + name + " in " + (neighborhood || "Manhattan, NYC") + " for: " + (occasion.join(", ") || "dining") + ". Vibe: " + (vibe.join(", ") || "good atmosphere") + ". Budget: " + budget + ". For each give: name, neighborhood, price range, and one sentence why it fits.")}
                     />
                   ))}
                 </div>
