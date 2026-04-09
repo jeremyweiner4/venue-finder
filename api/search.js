@@ -12,7 +12,7 @@ export default async function handler(req, res) {
     let finalText = "";
 
     const requestBody = {
-      model: "claude-sonnet-4-6",
+      model: useSearch ? "claude-sonnet-4-6" : "claude-haiku-4-5-20251001",
       max_tokens: 2000,
       messages,
     };
