@@ -317,13 +317,30 @@ export default function App() {
       const start = text.indexOf("["); const end = text.lastIndexOf("]");
       if (start === -1 || end === -1) throw new Error("No results found - try a different location or filters.");
       let jsonStr = text.slice(start, end + 1);
-      try {
-        setResults(JSON.parse(jsonStr));
-      } catch (parseErr) {
-        // Strip control characters and retry
-        jsonStr = jsonStr.replace(/[\u0000-\u001F\u007F]/g, " ").replace(/,\s*]/g, "]").replace(/,\s*}/g, "}");
-        setResults(JSON.parse(jsonStr));
+      let parsed = null;
+      // Attempt 1: direct parse
+      try { parsed = JSON.parse(jsonStr); } catch(e1) {}
+      // Attempt 2: strip control chars
+      if (!parsed) {
+        try {
+          const cleaned = jsonStr.replace(/[\u0000-\u001F\u007F]/g, " ").replace(/,\s*]/g, "]").replace(/,\s*}/g, "}");
+          parsed = JSON.parse(cleaned);
+        } catch(e2) {}
       }
+      // Attempt 3: extract individual objects
+      if (!parsed) {
+        try {
+          const objects = [];
+          const objRegex = /\{[^{}]*(?:\{[^{}]*\}[^{}]*)?\}/g;
+          let match;
+          while ((match = objRegex.exec(text)) !== null) {
+            try { objects.push(JSON.parse(match[0])); } catch(e) {}
+          }
+          if (objects.length > 0) parsed = objects;
+        } catch(e3) {}
+      }
+      if (!parsed) throw new Error("Could not parse results - please try again.");
+      setResults(parsed);
     } catch (e) { setError(e.message); }
     setLoading(false);
   };
