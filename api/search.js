@@ -59,7 +59,60 @@ export default async function handler(req, res) {
     }
 
     console.log("final text length:", finalText.length);
-    res.status(200).json({ text: finalText });
+    
+    // Extract JSON array from response
+    const start = finalText.indexOf("[");
+    const end = finalText.lastIndexOf("]");
+    let jsonStr = start !== -1 && end !== -1 ? finalText.slice(start, end + 1) : finalText;
+    
+    // Attempt to parse and repair JSON
+    let parsed = null;
+    
+    // Attempt 1: direct parse
+    try { parsed = JSON.parse(jsonStr); } catch(e) {}
+    
+    // Attempt 2: clean control chars and trailing commas
+    if (!parsed) {
+      try {
+        const c = jsonStr
+          .replace(/[\u0000-\u001F\u007F]/g, " ")
+          .replace(/,(\s*[}\]])/g, "$1")
+          .replace(/([^\\])'/g, "$1\\'");
+        parsed = JSON.parse(c);
+      } catch(e) {}
+    }
+    
+    // Attempt 3: fix unescaped apostrophes/quotes inside strings
+    if (!parsed) {
+      try {
+        // Replace smart quotes with straight quotes
+        const c = jsonStr
+          .replace(/[\u2018\u2019]/g, "'")
+          .replace(/[\u201C\u201D]/g, '"')
+          .replace(/[\u0000-\u001F\u007F]/g, " ")
+          .replace(/,(\s*[}\]])/g, "$1");
+        parsed = JSON.parse(c);
+      } catch(e) {}
+    }
+
+    // Attempt 4: extract individual venue objects
+    if (!parsed) {
+      try {
+        const objects = [];
+        let depth = 0, objStart = -1;
+        for (let i = 0; i < jsonStr.length; i++) {
+          if (jsonStr[i] === "{") { if (depth === 0) objStart = i; depth++; }
+          else if (jsonStr[i] === "}") { depth--; if (depth === 0 && objStart !== -1) { try { objects.push(JSON.parse(jsonStr.slice(objStart, i + 1))); } catch(e) {} } }
+        }
+        if (objects.length > 0) parsed = objects;
+      } catch(e) {}
+    }
+
+    if (parsed) {
+      res.status(200).json({ text: JSON.stringify(parsed) });
+    } else {
+      res.status(200).json({ text: finalText });
+    }
   } catch (e) {
     console.log("error:", e.message);
     res.status(500).json({ error: e.message });
