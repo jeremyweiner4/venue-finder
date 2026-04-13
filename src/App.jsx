@@ -293,8 +293,15 @@ export default function App() {
       "SOURCES: Search " + allSources + " first. If these do not cover the location, fall back to Yelp, Google reviews, TripAdvisor, local city magazines, local tourism boards, and Zagat.\n\n" +
       "Occasion: " + occasionStr + "\nType: " + (type.join(", ") || "restaurant") + "\nVibe: " + (vibe.join(", ") || "good atmosphere") + "\nLocation: " + loc + "\nRadius: " + radius + "\nHeadcount: " + headcount + " people\nTime: " + time + "\nDate(s): " + dateStr + "\nBudget: " + budget + " per person\nCuisine/focus: " + (cuisine || "open") + "\nAccess: " + (accessNotes || "none") + "\nNotes: " + (notes || "none") +
       culinaryNote + resNote + teamCtx + "\n\n" +
-      "CRITICAL: Respond with ONLY a valid JSON array. No markdown, no explanation. Start with [ end with ].\n" +
-      "Each object: {\"name\":\"\",\"neighborhood\":\"\",\"price_range\":\"\",\"sources_mentioned\":[],\"source_notes\":\"\",\"tags\":[],\"why_it_fits\":\"\",\"reservation_tip\":\"\",\"on_team_list\":false,\"top_pick\":false}\n" +
+      "CRITICAL FORMATTING RULES:\n" +
+      "1. Respond with ONLY a valid JSON array. Zero other text.\n" +
+      "2. Start your response with [ and end with ]\n" +
+      "3. No markdown, no code fences, no explanation before or after\n" +
+      "4. All string values must use straight double quotes only\n" +
+      "5. No trailing commas after the last item in any array or object\n" +
+      "6. No newlines or special characters inside string values\n\n" +
+      "Each object must have exactly these fields:\n" +
+      "{\"name\":\"\",\"neighborhood\":\"\",\"price_range\":\"\",\"sources_mentioned\":[],\"source_notes\":\"\",\"tags\":[],\"why_it_fits\":\"\",\"reservation_tip\":\"\",\"on_team_list\":false,\"top_pick\":false}\n\n" +
       "Return exactly " + count + " results. Only one top_pick: true.";
   };
 
